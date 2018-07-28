@@ -4,6 +4,8 @@ from kivy.uix.label import Label
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.boxlayout import BoxLayout
 from kivy.config import Config
+from kivy.clock import Clock
+from math import sqrt
 
 Config.set("graphics", "resizable", 0)
 Config.set("graphics", "width", 270)
@@ -13,10 +15,11 @@ count = 0
 operations = ["/", "*", "+", "-"]
 set(operations)
 
+
 def checkSymbol(text):
-    if text == "÷":
+    if text == "?":
         return "/"
-    elif text == "×":
+    elif text == "?":
         return "*"
     else:
         return text
@@ -29,11 +32,17 @@ def isThereAnError(text):
 
 
 class BoxApp(App):
+    lbl1 = Label(text="", font_size=40, halign="right", size_hint=(1, 0.4), text_size=(270, 50), shorten=True,
+                 shorten_from="left")
+    formula = ""
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.lbl = Label(text="", font_size=40, halign="right", size_hint=(1, 0.4), text_size=(270, 50))
-        self.formula = ""
+    def fontReduction(self, dt):
+        if self.lbl1.font_size > 20 and self.lbl1.is_shortened is True:
+            self.lbl1.font_size -= 5
+            self.updateLabel()
+
+    def startClock(self):
+        Clock.schedule_interval(self.fontReduction, .001)
 
     def operativeSymbolsBehaviour(self, text):
         if isThereAnError(self.formula) is True:
@@ -64,6 +73,7 @@ class BoxApp(App):
     def deleteAll(self, instance):
         self.formula = ""
         self.updateLabel()
+        self.lbl1.font_size = 40
 
     def deleteOneSymbol(self, instance):
         if isThereAnError(self.formula) is True:
@@ -74,7 +84,7 @@ class BoxApp(App):
             self.updateLabel()
 
     def updateLabel(self):
-        self.lbl.text = self.formula
+        self.lbl1.text = self.formula
 
     def multiplication(self, instance):
         self.operativeSymbolsBehaviour(instance.text)
@@ -107,7 +117,7 @@ class BoxApp(App):
                 self.formula = self.formula[:-1]
                 self.updateLabel()
             try:
-                self.formula = str(eval(self.formula))
+                self.formula = str(float(eval(self.formula)))
                 self.updateLabel()
             except SyntaxError:
                 self.formula = "ERROR"
@@ -116,13 +126,23 @@ class BoxApp(App):
                 self.formula = "ERROR"
                 self.updateLabel()
 
+    def squareRoot(self, instance):
+        if self.formula != "" and isThereAnError(self.formula) is False:
+            self.calculate(instance)
+            if float(self.formula) >= 0:
+                self.formula = str(sqrt(float(self.formula)))
+                self.updateLabel()
+            else:
+                self.formula = "ERROR"
+                self.updateLabel()
+
     def build(self):
-        bl = BoxLayout(orientation="vertical")
+        bl1 = BoxLayout(orientation="vertical")
         gl = GridLayout(cols=4, rows=5)
-        bl.add_widget(self.lbl)
+        bl1.add_widget(self.lbl1)
         gl.add_widget(Button(text="CE", on_press=self.deleteOneSymbol))
         gl.add_widget(Button(text="C", on_press=self.deleteAll))
-        gl.add_widget(Button(text=""))
+        gl.add_widget(Button(text="?", on_press=self.squareRoot))
         gl.add_widget(Button(text="/", on_press=self.division))
         gl.add_widget(Button(text="7", on_press=self.addNumber))
         gl.add_widget(Button(text="8", on_press=self.addNumber))
@@ -140,8 +160,9 @@ class BoxApp(App):
         gl.add_widget(Button(text="0", on_press=self.addNumber))
         gl.add_widget(Button(text=".", on_press=self.addPoint))
         gl.add_widget(Button(text="=", on_press=self.calculate))
-        bl.add_widget(gl)
-        return bl
+        bl1.add_widget(gl)
+        self.startClock()
+        return bl1
 
 
 if __name__ == "__main__":
